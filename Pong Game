@@ -1,0 +1,188 @@
+/* VARIABLES */
+let paddle, ball;
+let score = 0;
+let lives = 3;
+let walls, wallTop;
+let level = 1, highScore = 0;
+let trail = [];
+let playAgainButton;
+
+function preload() {
+  // Include preload logic if needed
+}
+
+/* SETUP RUNS ONCE */
+function setup() {
+  createCanvas(400, 400);
+  initializeGame();
+  stroke(0);
+  strokeWeight(2);
+  
+  // Create the play again button, hide it initially
+  playAgainButton = createButton('Play Again');
+  playAgainButton.position(160, 200);
+  playAgainButton.size(80, 40);
+  playAgainButton.hide();
+  playAgainButton.mousePressed(restartGame);
+}
+
+function initializeGame() {
+  background(224, 224, 224);
+
+  // Reset game variables
+  score = 0;
+  lives = 3;
+  level = 1;
+  trail = []; // Reset trail
+
+  // Create paddle
+  createPaddle();
+
+  // Create ball
+  if (ball) {
+    ball.remove();
+  }
+  createBall();
+
+  // Create walls group
+  if (walls) {
+    walls.remove();
+  }
+  walls = new Group();
+  walls.color = color('black');
+  walls.w = 10;
+  walls.h = 400;
+  walls.collider = "static";
+  walls.visible = false;
+
+  // Left and right walls
+  new walls.Sprite(0, height / 2);
+  new walls.Sprite(width, height / 2);
+
+  // Top wall
+  wallTop = new walls.Sprite(width / 2, 0);
+  wallTop.rotation = 90;
+}
+
+function createPaddle() {
+  // Remove existing paddle if needed
+  if (paddle) {
+    paddle.remove();
+  }
+  paddle = new Sprite(200, 380, 100, 20);
+  paddle.color = color(random(255), random(255), random(255));
+  paddle.rotationLock = true;
+  paddle.stroke = 'black';
+  paddle.strokeWeight = 1.5;
+  
+}
+
+function createBall() {
+  ball = new Sprite(200, 200, 20);
+  ball.color = color(random(0, 255), random(0, 255), random(0, 255));
+  ball.direction = 'down';
+  ball.speed = 5 + level;
+  ball.bounciness = 1;
+  ball.friction = 0;
+  ball.d = 35;
+  ball.stroke = 'black';
+  ball.strokeWeight = 1.5;
+}
+
+/* DRAW LOOP REPEATS */
+function draw() {
+  background(224, 224, 224);
+
+  // Move the paddle
+  paddle.moveTowards(mouseX, 380, 1);
+
+  // When ball collides with paddle bounce off and increase score
+  if (ball.collides(paddle)) {
+    ball.speed += 2;
+    score++;
+    ball.direction += random(-10, 10);
+    ball.d = ball.d - 1;
+    ball.color = color(random(0, 255), random(0, 255), random(0, 255));
+    paddle.color = color(random(255), random(255), random(255));
+
+    if (score > highScore) {
+      highScore = score;
+    }
+
+    if (score % 10 === 0) {
+      level++;
+      ball.speed = 5 + level;
+    }
+  }
+
+  // Store ball positions for trail effect
+  trail.push({ x: ball.x, y: ball.y });
+  if (trail.length > 10) trail.shift(); // Limit trail length
+
+  // Draw ball trail
+  noFill();
+  stroke(224, 224, 224, 150); // Match background color to remove visible outline
+  beginShape();
+  for (let i = 0; i < trail.length; i++) {
+    vertex(trail[i].x, trail[i].y);
+  }
+  endShape();
+
+  // When ball hits the ground you lose a life
+  if (ball.y > 390) {
+    lives--;
+    if (lives <= 0) {
+      if (score > highScore) {
+        highScore = score;
+      }
+      fill(0);
+      textSize(20);
+      textAlign(CENTER);
+      text('You lose!', 200, 160);
+      playAgainButton.show();  // Show the play again button
+      paddle.visible = false;  // Hide the paddle
+      ball.visible = false;    // Hide the ball
+      noLoop();
+    } else {
+      createBall();
+    }
+  }
+
+  // Draw the score and lives
+  fill(0, 128, 128);
+  textAlign(LEFT);
+  textSize(20);
+  text(`Score = ${score}`, 10, 30);
+  
+  // Draw hearts to represent lives
+  let hearts = '❤️'.repeat(lives);
+  text(`Lives = ${hearts}`, 10, 60);
+
+  text(`Level = ${level}`, 10, 90);
+  text(`High Score = ${highScore}`, 10, 120);
+
+  // Check if the player wins
+  if (score == 50) {
+    fill(0);
+    textSize(20);
+    textAlign(CENTER);
+    text('You win!', width / 2, height / 2);
+    playAgainButton.show();  // Show the play again button
+    paddle.visible = false;  // Hide the paddle
+    ball.visible = false;    // Hide the ball
+    noLoop();
+  }
+}
+
+function restartGame() {
+  // Hide the button, delete the sprites, and reset the game
+  playAgainButton.hide();
+  if (paddle) {
+    paddle.remove();
+  }
+  if (ball) {
+    ball.remove();
+  }
+  initializeGame();
+  loop();  // Restart the draw loop
+}
